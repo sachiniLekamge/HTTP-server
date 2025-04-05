@@ -1,5 +1,6 @@
 const net = require("net");
 const fs = require("fs");
+const zlib = require("zlib");
 
 console.log("Logs from your program will appear here!");
 
@@ -9,7 +10,7 @@ const parseRequest = (requestData) => {
   const headers = {};
   request.slice(1).forEach((header) => {
     const [key, ...rest] = header.split(": ");
-    if (key && rest.length) {
+    if (key && rest.length > 0) {
       headers[key] = rest.join(": ");
     }
   });
@@ -22,25 +23,28 @@ const ERROR_RESPONSE = "HTTP/1.1 404 Not Found\r\n\r\n";
 const server = net.createServer((socket) => {
   socket.on("data", (data) => {
     const request = parseRequest(data);
-    const { method, path, headers } = request;
+    const { method, path, protocol, headers } = request;
 
     if (path === "/") {
       socket.write(OK_RESPONSE);
     } else if (path.startsWith("/echo")) {
-      const randomString = path.substring(6);
-      const acceptEncoding = headers["Accept-Encoding"];
-      const encodings = acceptEncoding
-        ? acceptEncoding.split(",").map((e) => e.trim())
-        : [];
-      const contentEncodingHeader = encodings.includes("gzip")
-        ? "Content-Encoding: gzip\r\n"
-        : "";
+      const message = path.substring(6);
+      const acceptEncoding = headers["Accept-Encoding"] || "";
+      const encodings = acceptEncoding.split(",").map((e) => e.trim());
 
-      socket.write(
-        `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n${contentEncodingHeader}Content-Length: ${randomString.length}\r\n\r\n${randomString}`
-      );
+      if (encodings.includes("gzip")) {
+        const compressed = zlib.gzipSync(message);
+        socket.write(
+          `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nContent-Length: ${compressed.length}\r\n\r\n`
+        );
+        socket.write(compressed);
+      } else {
+        socket.write(
+          `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${message.length}\r\n\r\n${message}`
+        );
+      }
     } else if (path.startsWith("/user-agent")) {
-      const agent = headers["User-Agent"];
+      const agent = headers["User-Agent"] || "";
       socket.write(
         `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${agent.length}\r\n\r\n${agent}`
       );
@@ -50,6 +54,7 @@ const server = net.createServer((socket) => {
       const isExist = fs
         .readdirSync(process.argv[3])
         .some((file) => file === fileName);
+
       if (isExist) {
         const content = fs.readFileSync(filePath, "utf-8");
         socket.write(
