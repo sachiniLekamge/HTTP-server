@@ -5,10 +5,10 @@ const path = require("path");
 const directory = process.argv[3];
 
 if (!directory) {
-  console.error(
-    "Error: Please provide a directory path using --directory flag."
+  console.log(
+    "No directory specified. Skipping file handling for concurrent connections."
   );
-  process.exit(1);
+  directory = "";
 }
 
 console.log("Logs from your program will appear here!");
