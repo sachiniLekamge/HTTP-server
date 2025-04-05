@@ -22,15 +22,19 @@ const ERROR_RESPONSE = "HTTP/1.1 404 Not Found\r\n\r\n";
 const server = net.createServer((socket) => {
   socket.on("data", (data) => {
     const request = parseRequest(data);
-    const { method, path, protocol, headers } = request;
+    const { method, path, headers } = request;
 
     if (path === "/") {
       socket.write(OK_RESPONSE);
     } else if (path.startsWith("/echo")) {
       const randomString = path.substring(6);
       const acceptEncoding = headers["Accept-Encoding"];
-      const contentEncodingHeader =
-        acceptEncoding === "gzip" ? "Content-Encoding: gzip\r\n" : "";
+      const encodings = acceptEncoding
+        ? acceptEncoding.split(",").map((e) => e.trim())
+        : [];
+      const contentEncodingHeader = encodings.includes("gzip")
+        ? "Content-Encoding: gzip\r\n"
+        : "";
 
       socket.write(
         `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n${contentEncodingHeader}Content-Length: ${randomString.length}\r\n\r\n${randomString}`
@@ -43,9 +47,9 @@ const server = net.createServer((socket) => {
     } else if (path.startsWith("/files/") && method === "GET") {
       const fileName = path.replace("/files/", "").trim();
       const filePath = process.argv[3] + fileName;
-      const isExist = fs.readdirSync(process.argv[3]).some((file) => {
-        return file === fileName;
-      });
+      const isExist = fs
+        .readdirSync(process.argv[3])
+        .some((file) => file === fileName);
       if (isExist) {
         const content = fs.readFileSync(filePath, "utf-8");
         socket.write(
