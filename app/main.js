@@ -2,7 +2,7 @@ const net = require("net");
 const fs = require("fs");
 const path = require("path");
 
-const directory = process.argv[3];
+let directory = process.argv[3];
 
 if (!directory) {
   console.log(
