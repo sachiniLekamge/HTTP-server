@@ -16,7 +16,9 @@ const server = net.createServer((socket) => {
 
     const [method, path] = req.split("\r\n")[0].split(" ");
 
-    if (method === "GET" && path.startsWith("/files/")) {
+    if (method === "GET" && path === "/") {
+      socket.write("HTTP/1.1 200 OK\r\n\r\n");
+    } else if (method === "GET" && path.startsWith("/files/")) {
       const directory = process.argv[3];
       const filename = path.split("/files/")[1];
 
