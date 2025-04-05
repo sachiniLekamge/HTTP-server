@@ -7,10 +7,31 @@ const server = net.createServer((socket) => {
     socket.end();
     server.close();
   });
+
   socket.on("data", (data) => {
     const path = data.toString().split(" ")[1];
-    const responseStatus = path === "/" ? "200 OK" : "404 Not Found";
-    socket.write(`HTTP/1.1 ${responseStatus}\r\n\r\n`);
+    let responseStatus = "404 Not Found";
+    let responseBody = "";
+    let contentType = "text/plain";
+    let contentLength = 0;
+
+    const echoMatch = path.match(/^\/echo\/(.+)$/);
+    if (path === "/" || echoMatch) {
+      responseStatus = "200 OK";
+      if (echoMatch) {
+        responseBody = echoMatch[1];
+        contentLength = responseBody.length;
+      }
+    }
+
+    socket.write(`HTTP/1.1 ${responseStatus}\r\n`);
+    socket.write(`Content-Type: ${contentType}\r\n`);
+    socket.write(`Content-Length: ${contentLength}\r\n`);
+    socket.write(`\r\n`); // End of headers
+
+    if (responseStatus === "200 OK") {
+      socket.write(responseBody);
+    }
   });
 });
 
