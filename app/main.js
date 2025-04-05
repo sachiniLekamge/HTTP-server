@@ -9,7 +9,8 @@ const server = net.createServer((socket) => {
   });
 
   socket.on("data", (data) => {
-    const path = data.toString().split(" ")[1];
+    const request = data.toString();
+    const path = request.split(" ")[1];
     let responseStatus = "404 Not Found";
     let responseBody = "";
     let contentType = "text/plain";
@@ -24,10 +25,22 @@ const server = net.createServer((socket) => {
       }
     }
 
+    const userAgentMatch = path === "/user-agent";
+    if (userAgentMatch) {
+      const userAgentHeader = request
+        .split("\r\n")
+        .find((line) => line.startsWith("User-Agent:"));
+      if (userAgentHeader) {
+        responseStatus = "200 OK";
+        responseBody = userAgentHeader.split(": ")[1];
+        contentLength = responseBody.length;
+      }
+    }
+
     socket.write(`HTTP/1.1 ${responseStatus}\r\n`);
     socket.write(`Content-Type: ${contentType}\r\n`);
     socket.write(`Content-Length: ${contentLength}\r\n`);
-    socket.write(`\r\n`); // End of headers
+    socket.write(`\r\n`);
 
     if (responseStatus === "200 OK") {
       socket.write(responseBody);
